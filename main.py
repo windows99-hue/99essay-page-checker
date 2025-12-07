@@ -3,6 +3,9 @@ from clc99 import *
 import argparse
 import os
 import sys
+from docx import Document
+from PyPDF2 import PdfReader
+
 
 def getFileContent(filename, encoding='utf-8'):
     print_status("正在读取文件...")
@@ -12,9 +15,26 @@ def getFileContent(filename, encoding='utf-8'):
     if not os.path.isfile(filename):
         raise ValueError(f"路径不是文件: {filename}")
     
-    with open(filename, 'r', encoding=encoding) as file:
-        content = file.read()
-    return content
+    # 新增：Word文档（.docx）解析
+    if filename.endswith('.docx'):
+        doc = Document(filename)
+        content = '\n'.join([para.text for para in doc.paragraphs])
+        return content
+    # 新增：PDF文档解析
+    elif filename.endswith('.pdf'):
+        reader = PdfReader(filename)
+        content = ''
+        for page in reader.pages:
+            page_text = page.extract_text() or ''  # 处理空白页
+            content += page_text + '\n'
+        return content
+    # 保留原有TXT文件读取
+    elif filename.endswith('.txt'):
+        with open(filename, 'r', encoding=encoding, errors='ignore') as file:
+            content = file.read()
+        return content
+    else:
+        raise ValueError(f"不支持的文件格式！仅支持 .txt、.docx、.pdf")
 
 def is_punctuation(char):
     single_point_symbol = ["。", "！", "？", "；", "，", "、", "：", "」", "』", "）", "】", "》"]
@@ -213,6 +233,6 @@ print_finish("分析完成！总占格：",result)
 print_status(f"估计页数: {pages} (每页{args.perpage}格)")
 
 if args.perpage - result >= 0:
-    print_good("作文可以写下！")
+    print_good("作文可以写下！还剩:", args.perpage - result, "个格子~")
 else:
     print_error("ohno！一页塞不下，您还需要减少", result - args.perpage, "个字或者再拿一张纸~")

@@ -34,4 +34,8 @@ PS E:\>
 ~~~
 
 运行效果演示：
+<img width="1511" height="589" alt="image" src="https://github.com/user-attachments/assets/6807553e-1510-463e-a98c-98a109976485" />
 
+<img width="1542" height="258" alt="image" src="https://github.com/user-attachments/assets/d4ba7608-62d7-48c1-872c-69d2a6e96e5b" />
+
+## 祝作文越写越好！60分！！

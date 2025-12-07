@@ -6,11 +6,9 @@ import sys
 
 def getFileContent(filename, encoding='utf-8'):
     print_status("正在读取文件...")
-    # 检查文件是否存在
     if not os.path.exists(filename):
         raise FileNotFoundError(f"{filename} 不存在")
     
-    # 检查是否为文件
     if not os.path.isfile(filename):
         raise ValueError(f"路径不是文件: {filename}")
     
@@ -19,7 +17,6 @@ def getFileContent(filename, encoding='utf-8'):
     return content
 
 def is_punctuation(char):
-    """判断字符是否为标点符号"""
     single_point_symbol = ["。", "！", "？", "；", "，", "、", "：", "」", "』", "）", "】", "》"]
     double_point_symbol_start = ["……", "——"]
     merge_point_symbol_open = ["“", "‘", "（", "【", "《"]
@@ -31,7 +28,6 @@ def is_punctuation(char):
             char in merge_point_symbol_close)
 
 def should_merge_with_next(current_char, next_char):
-    """判断当前字符是否应该与后一个字符合并为一个格子"""
     # 双字节标点的第一部分
     double_symbols = ["……", "——"]
     
@@ -67,13 +63,13 @@ def main(quiet=False):
     print_good("已读取文件！初始字符数量:", len(data))
     print_status("正在分析文件内容...")
 
-    prev_char = ""
+    prev_char = ""         # 上一个字符
+    next_char = ""         # 下一个字符
     cnt = 0                # 已占用格子总数
     line_idx = 0           # 当前行已用格子数（0-based）
     checked_title = False  # 是否已检查标题
     new_paragraph = False  # 是否是新段落开始
     skip_next = False      # 是否跳过下一个字符（用于双字节标点）
-    is_first_line = True   # 是否是第一行（标题行）
     lines_processed = 0    # 已处理的行数
     
     i = 0
@@ -105,7 +101,7 @@ def main(quiet=False):
                 checked_title = True
                 print_status(f"标题检查完毕！共{line_idx}字符")
             
-            # 当前行剩余格子浪费掉（如果不在行末） - 只有不是最后一行才计算
+            # 当前行剩余格子浪费掉
             if line_idx > 0:
                 remaining_in_line = args.perrow - line_idx
                 # 如果不是最后一行，加上剩余空格
@@ -119,29 +115,25 @@ def main(quiet=False):
             is_first_line = False  # 不再是第一行
             continue
         
-        # 2. 新段落开头：添加缩进
+        #添加缩进
         if new_paragraph and line_idx == 0:
             indent = args.paragraph_spacing if hasattr(args, 'paragraph_spacing') else 2
             if indent > 0:
-                # 检查当前行是否能放下缩进
-                if indent <= args.perrow:
-                    if checked_title:  # 只有标题后的段落才缩进
-                        cnt += indent
-                        line_idx += indent
-                        print_status(f"段落缩进: +{indent}格")
-                else:
-                    print_warning(f"警告: 缩进{indent}格超过行宽{args.perrow}")
+                if checked_title:  # 只有标题后的段落才缩进
+                    cnt += indent
+                    line_idx += indent
+                    print_status(f"段落缩进: +{indent}格")
             new_paragraph = False
         
         # 3. 检查是否需要合并标点
         should_merge = False
         
         # 检查与前一个字符合并
-        if prev_char and is_punctuation(char) and is_punctuation(prev_char):
+        if prev_char and is_punctuation(char) and is_punctuation(prev_char) and not args.no_merge:
             should_merge = True
         
         # 检查与后一个字符合并（双字节标点）
-        elif next_char and should_merge_with_next(char, next_char):
+        elif next_char and should_merge_with_next(char, next_char) and not args.no_merge:
             # 如果是双字节标点，两个字符占1格
             cnt += 1
             line_idx += 1
@@ -167,25 +159,12 @@ def main(quiet=False):
         
         # 如果一行满了，换行
         if line_idx >= args.perrow:
-            # 当前行剩余空格计数（满行时剩余0）
             lines_processed += 1
             line_idx = 0
-            # 换行后如果是段落中间，不需要缩进
             new_paragraph = False
         
         i += 1
-    
-    # 处理最后一行剩余的格子 - 最后一行不计算剩余空格
-    # 如果最后一行有内容，已经计数，不需要额外处理
-    
-    # 计算页数
-    pages = cnt // args.perpage
-    if cnt % args.perpage > 0:
-        pages += 1
-    
-    print_status(f"总计占用格子: {cnt}")
-    print_status(f"估计页数: {pages} (每页{args.perpage}格)")
-    
+
     return cnt
 
 @loading99("正在检查作文，请稍候...")
@@ -223,7 +202,15 @@ else:
 if result == None:
     sys.exit(1)
 
+print("*"*50)
+
+# 计算页数
+pages = result // args.perpage
+if result % args.perpage > 0:
+    pages += 1
+
 print_finish("分析完成！总占格：",result)
+print_status(f"估计页数: {pages} (每页{args.perpage}格)")
 
 if args.perpage - result >= 0:
     print_good("作文可以写下！")
